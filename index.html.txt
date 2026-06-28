@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Somnus - Offline Sleep Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .amoled { background: #000000 !important; }
+        .amoled .glass-card { background: #0a0a0a; border: 1px solid #222; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen transition-colors duration-300 pb-20 md:pb-0 md:pl-64">
+
+
+    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 flex justify-around items-center z-50 md:top-0 md:right-auto md:w-64 md:h-full md:flex-col md:justify-start md:p-6 md:space-y-8 md:border-r md:border-t-0">
+        <div class="hidden md:flex items-center space-x-3 w-full px-4 py-2">
+            <span class="material-icons-round text-indigo-400 text-3xl">nights_stay</span>
+            <span class="text-xl font-bold tracking-wider bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">SOMNUS</span>
+        </div>
+        <div class="flex justify-around w-full md:flex-col md:space-y-2">
+            <button onclick="switchTab('dashboard')" class="nav-btn flex flex-col md:flex-row items-center md:space-x-4 text-indigo-400 p-2 md:w-full md:hover:bg-slate-800 rounded-xl transition">
+                <span class="material-icons-round">dashboard</span><span class="text-xs md:text-sm font-medium">Dashboard</span>
+            </button>
+            <button onclick="switchTab('history')" class="nav-btn flex flex-col md:flex-row items-center md:space-x-4 text-slate-400 p-2 md:w-full md:hover:bg-slate-800 rounded-xl transition">
+                <span class="material-icons-round">history</span><span class="text-xs md:text-sm font-medium">History</span>
+            </button>
+            <button onclick="switchTab('analytics')" class="nav-btn flex flex-col md:flex-row items-center md:space-x-4 text-slate-400 p-2 md:w-full md:hover:bg-slate-800 rounded-xl transition">
+                <span class="material-icons-round">bar_chart</span><span class="text-xs md:text-sm font-medium">Analytics</span>
+            </button>
+            <button onclick="switchTab('settings')" class="nav-btn flex flex-col md:flex-row items-center md:space-x-4 text-slate-400 p-2 md:w-full md:hover:bg-slate-800 rounded-xl transition">
+                <span class="material-icons-round">settings</span><span class="text-xs md:text-sm font-medium">Settings</span>
+            </button>
+        </div>
+        <button onclick="openModal()" class="absolute -top-6 right-6 md:static bg-indigo-600 hover:bg-indigo-500 shadow-lg text-white p-4 rounded-full flex items-center justify-center transform hover:scale-105 transition">
+            <span class="material-icons-round">add</span>
+        </button>
+    </nav>
+
+
+    <main class="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+        
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <header class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Sleep Dashboard</h1>
+                    <p class="text-sm text-slate-400" id="current-date-string"></p>
+                </div>
+                <div class="flex items-center space-x-2 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
+                    <span class="material-icons-round text-amber-500">local_fire_department</span>
+                    <span class="font-bold text-sm" id="streak-display">0 Day Streak</span>
+                </div>
+            </header>
+
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Last Sleep Duration</span>
+                    <div class="my-2 flex items-baseline space-x-1">
+                        <span class="text-2xl md:text-3xl font-black text-indigo-400" id="stat-last-duration">--</span>
+                        <span class="text-xs text-slate-400">hrs</span>
+                    </div>
+                    <div class="text-xs text-emerald-400 flex items-center" id="stat-last-score-badge">--</div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Sleep Debt</span>
+                    <div class="my-2 flex items-baseline space-x-1">
+                        <span class="text-2xl md:text-3xl font-black text-rose-400" id="stat-sleep-debt">0.0</span>
+                        <span class="text-xs text-slate-400">hrs</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Relative to target goal</span>
+                </div>
+                <div class="glass-card p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Avg Sleep Quality</span>
+                    <div class="my-2 flex items-baseline space-x-1">
+                        <span class="text-2xl md:text-3xl font-black text-purple-400" id="stat-avg-quality">--</span>
+                        <span class="text-xs text-slate-400">/10</span>
+                    </div>
+                    <span class="text-xs text-slate-400" id="stat-quality-descriptor">No data</span>
+                </div>
+                <div class="glass-card p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Avg Bedtime</span>
+                    <div class="my-2 flex items-baseline space-x-1">
+                        <span class="text-2xl md:text-3xl font-black text-amber-400" id="stat-avg-bedtime">--</span>
+                    </div>
+                    <span class="text-xs text-slate-400" id="stat-avg-wakeup">Avg Wakeup: --</span>
+                </div>
+            </div>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-6 rounded-2xl flex flex-col items-center justify-center md:col-span-1 text-center relative overflow-hidden">
+                    <h3 class="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">Goal Fulfillment</h3>
+                    <div class="relative w-36 h-36 flex items-center justify-center">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent"/>
+                            <circle id="goal-progress-ring" cx="50" cy="50" r="40" stroke="url(#indigoGrad)" stroke-width="8" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="indigoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#818cf8" />
+                                    <stop offset="100%" stop-color="#c084fc" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute text-center">
+                            <span class="text-2xl font-black" id="goal-pct-text">0%</span>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-widest">Achieved</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="glass-card p-6 rounded-2xl md:col-span-2 space-y-4">
+                    <h3 class="text-sm font-semibold tracking-wider text-slate-400 uppercase">AI-Driven Sleep Insights</h3>
+                    <div id="insights-container" class="space-y-3 text-sm text-slate-300">
+                        <div class="flex items-start space-x-3 text-slate-400 italic">
+                            <span class="material-icons-round text-indigo-400">auto_awesome</span>
+                            <p>Log at least 3 nights of sleep to start receiving personalized metrics, consistency assessments, and optimization tips.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="glass-card p-4 md:p-6 rounded-2xl">
+                <h3 class="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">7-Day Architectural Window</h3>
+                <div class="h-64">
+                    <canvas id="dashboardChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="tab-history" class="tab-content hidden space-y-6">
+            <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Sleep Registry</h1>
+                    <p class="text-sm text-slate-400">Modify, verify, or slice historical browser telemetry</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="search-input" oninput="renderHistory()" placeholder="Search metrics or notes..." class="bg-slate-800 text-sm border border-slate-700 px-4 py-2 rounded-xl focus:outline-none focus:border-indigo-500 w-full sm:w-64">
+                    <select id="sort-select" onchange="renderHistory()" class="bg-slate-800 text-sm border border-slate-700 px-4 py-2 rounded-xl focus:outline-none focus:border-indigo-500">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="quality-desc">Highest Quality</option>
+                        <option value="duration-desc">Longest Sleep</option>
+                    </select>
+                </div>
+            </header>
+            <div id="history-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+
+        <section id="tab-analytics" class="tab-content hidden space-y-6">
+            <header class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Analytics & Trends</h1>
+                    <p class="text-sm text-slate-400">Cross-computational distribution curves</p>
+                </div>
+                <select id="analytics-filter" onchange="updateAnalytics()" class="bg-slate-800 text-sm border border-slate-700 px-4 py-2 rounded-xl">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                </select>
+            </header>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-4 rounded-2xl">
+                    <h4 class="text-xs font-semibold uppercase text-slate-400 tracking-wider mb-2">Quality vs Duration Scatter Correlation</h4>
+                    <div class="h-64"><canvas id="analyticsCorrelationChart"></canvas></div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl">
+                    <h4 class="text-xs font-semibold uppercase text-slate-400 tracking-wider mb-2">Chronotype Bedtime Consistency Curve</h4>
+                    <div class="h-64"><canvas id="analyticsConsistencyChart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="tab-settings" class="tab-content hidden space-y-6">
+            <header>
+                <h1 class="text-3xl font-extrabold tracking-tight">Configuration Engine</h1>
+                <p class="text-sm text-slate-400">Manage sandboxed configurations, target metrics, and imports</p>
+            </header>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-6 rounded-2xl space-y-4">
+                    <h3 class="font-bold text-lg text-indigo-400">Target Vectors</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Target Sleep Duration (Hours)</label>
+                            <input type="number" id="cfg-target-duration" step="0.5" value="8" class="bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 w-full text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Target Bedtime</label>
+                                <input type="time" id="cfg-target-bedtime" value="22:30" class="bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 w-full text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Target Wake Time</label>
+                                <input type="time" id="cfg-target-wake" value="06:30" class="bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 w-full text-sm">
+                            </div>
+                        </div>
+                        <button onclick="saveTargets()" class="bg-indigo-600 hover:bg-indigo-500 w-full text-sm py-2.5 rounded-xl font-bold transition">Commit Target Vectors</button>
+                    </div>
+                </div>
+
+
+                <div class="glass-card p-6 rounded-2xl space-y-4">
+                    <h3 class="font-bold text-lg text-purple-400">Display & Themes</h3>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">AMOLED Deep Black UI</span>
+                        <input type="checkbox" id="cfg-amoled" onchange="toggleAmoled()" class="w-10 h-5 bg-slate-700 checked:bg-indigo-600 rounded-full appearance-none cursor-pointer relative checked:before:translate-x-5 before:content-[''] before:absolute before:w-5 before:h-5 before:bg-white before:rounded-full before:transition">
+                    </div>
+                    <hr class="border-slate-800">
+                    <h3 class="font-bold text-lg text-amber-400">Data Interoperability</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="exportJSON()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs py-2 rounded-xl font-medium transition">Export Records (JSON)</button>
+                        <button onclick="document.getElementById('import-file').click()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs py-2 rounded-xl font-medium transition">Import File</button>
+                    </div>
+                    <input type="file" id="import-file" class="hidden" onchange="importJSON(event)">
+                    <button onclick="purgeEngine()" class="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 text-rose-300 text-xs py-2.5 w-full rounded-xl font-bold transition">Hard Purge Local IndexedDB Database</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+
+    <div id="entry-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-lg rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <header class="flex justify-between items-center">
+                <h2 id="modal-title" class="text-xl font-bold">Log Sleep Matrix</h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><span class="material-icons-round">close</span></button>
+            </header>
+            <form id="sleep-form" onsubmit="saveEntry(event)" class="space-y-4 text-sm">
+                <input type="hidden" id="entry-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1 text-xs uppercase tracking-wider">Bedtime Date</label>
+                        <input type="date" id="form-date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 text-xs uppercase tracking-wider">Quality (1 - 10)</label>
+                        <input type="number" id="form-quality" min="1" max="10" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1 text-xs uppercase tracking-wider">Bedtime Clock</label>
+                        <input type="time" id="form-bedtime" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 text-xs uppercase tracking-wider">Wakeup Clock</label>
+                        <input type="time" id="form-wakeup" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 text-xs uppercase tracking-wider">Waking Micro-Mood</label>
+                    <select id="form-mood" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-indigo-500">
+                        <option value="☀️ Refreshed">☀️ Refreshed</option>
+                        <option value="🌤️ Balanced">🌤️ Balanced</option>
+                        <option value="🥱 Lethargic">🥱 Lethargic</option>
+                        <option value="☠️ Exhausted">☠️ Exhausted</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 text-xs uppercase tracking-wider">Behavioral/Qualitative Notes</label>
+                    <textarea id="form-notes" rows="2" placeholder="Caffeine window, room temperatures, sleep disturbances..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition">Commit To Device Storage</button>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // GLOBAL CONSTANTS & CONTROLLERS
+        let db = null;
+        let cachedRecords = [];
+        let dashboardChartInstance = null;
+        let correlationChartInstance = null;
+        let consistencyChartInstance = null;
+
+
+        const targets = JSON.parse(localStorage.getItem('somnus_targets')) || { duration: 8, bedtime: "22:30", wake: "06:30" };
+
+
+        document.getElementById('current-date-string').innerText = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+
+        // INITIALIZE INDEXEDDB
+        const request = indexedDB.open("SomnusDatabase", 1);
+        request.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if(!db.objectStoreNames.contains("sleep_records")) {
+                db.createObjectStore("sleep_records", { keyPath: "id", autoIncrement: true });
+            }
+        };
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            hydrateApplication();
+        };
+
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('text-indigo-400'));
+            event.currentTarget.classList.add('text-indigo-400');
+            if(tabId === 'analytics') updateAnalytics();
+        }
+
+
+        function hydrateApplication() {
+            const transaction = db.transaction(["sleep_records"], "readonly");
+            const store = transaction.objectStore("sleep_records");
+            const getAll = store.getAll();
+            getAll.onsuccess = () => {
+                cachedRecords = getAll.result.sort((a,b) => new Date(b.date + 'T' + b.bedtime) - new Date(a.date + 'T' + a.bedtime));
+                // Safety Backup Routine
+                localStorage.setItem('somnus_backup', JSON.stringify(cachedRecords));
+                calculateCoreMetrics();
+                renderHistory();
+                buildDashboardChart();
+            };
+        }
+
+
+        function calculateCoreMetrics() {
+            if(cachedRecords.length === 0) return;
+            
+            const last = cachedRecords[0];
+            const lastDuration = calculateDuration(last.bedtime, last.wakeup);
+            document.getElementById('stat-last-duration').innerText = lastDuration.toFixed(1);
+            
+            const score = Math.min(100, Math.round((lastDuration / targets.duration) * 50 + (last.quality * 5)));
+            const badge = document.getElementById('stat-last-score-badge');
+            badge.innerText = `Sleep Score: ${score}/100`;
+            
+            // Average Calculations
+            let totalDur = 0; let totalQual = 0;
+            cachedRecords.forEach(r => {
+                totalDur += calculateDuration(r.bedtime, r.wakeup);
+                totalQual += parseInt(r.quality);
+            });
+            const avgDur = totalDur / cachedRecords.length;
+            const avgQual = totalQual / cachedRecords.length;
+            
+            document.getElementById('stat-avg-quality').innerText = avgQual.toFixed(1);
+            const debt = (targets.duration * cachedRecords.length) - totalDur;
+            document.getElementById('stat-sleep-debt').innerText = Math.max(0, debt).toFixed(1);
+
+
+            // Ring progress calculation
+            const pct = Math.min(100, Math.round((avgDur / targets.duration) * 100));
+            document.getElementById('goal-pct-text').innerText = `${pct}%`;
+            const offset = 251.2 - (251.2 * pct) / 100;
+            document.getElementById('goal-progress-ring').style.strokeDashoffset = offset;
+
+
+            // Generate Insights 
+            const insightsBox = document.getElementById('insights-container');
+            if (cachedRecords.length >= 2) {
+                insightsBox.innerHTML = `
+                    <div class="flex items-center space-x-2 text-emerald-400 font-medium">
+                        <span class="material-icons-round text-sm">trending_up</span>
+                        <span>Your baseline analytical aggregate is hovering at ${avgDur.toFixed(1)} hrs per evening structure.</span>
+                    </div>
+                    <div class="text-slate-400 pl-6 text-xs">Target validation indicates an optimization alignment of ${pct}% against parameters.</div>
+                `;
+            }
+            
+            // Simple operational streaks engine
+            document.getElementById('streak-display').innerText = `${cachedRecords.length} Day Logged`;
+        }
+
+
+        function calculateDuration(bedtime, wakeup) {
+            let [bH, bM] = bedtime.split(':').map(Number);
+            let [wH, wM] = wakeup.split(':').map(Number);
+            let bDate = new Date(2020, 0, 1, bH, bM);
+            let wDate = new Date(2020, 0, 1, wH, wM);
+            if (wDate < bDate) wDate.setDate(wDate.getDate() + 1);
+            return (wDate - bDate) / 1000 / 60 / 60;
+        }
+
+
+        // CHART ARCHITECTURE ENGINE
+        function buildDashboardChart() {
+            const ctx = document.getElementById('dashboardChart').getContext('2d');
+            const discoverySlice = [...cachedRecords].slice(0, 7).reverse();
+            const labels = discoverySlice.map(r => r.date);
+            const datasets = discoverySlice.map(r => calculateDuration(r.bedtime, r.wakeup));
+
+
+            if(dashboardChartInstance) dashboardChartInstance.destroy();
+            dashboardChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Absolute Macro-Sleep (Hours)',
+                        data: datasets.length ? datasets : [0],
+                        backgroundColor: 'rgba(129, 140, 248, 0.4)',
+                        borderColor: '#818cf8',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+
+        function updateAnalytics() {
+            const ctx1 = document.getElementById('analyticsCorrelationChart').getContext('2d');
+            if(correlationChartInstance) correlationChartInstance.destroy();
+            
+            correlationChartInstance = new Chart(ctx1, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Nights Mapped',
+                        data: cachedRecords.map(r => ({ x: calculateDuration(r.bedtime, r.wakeup), y: r.quality })),
+                        backgroundColor: '#c084fc'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'Hours' } }, y: { title: { display: true, text: 'Quality' } } } }
+            });
+        }
+
+
+        // DATA CONTROL ROUTINES (CRUD)
+        function openModal(id = null) {
+            document.getElementById('entry-modal').classList.remove('hidden');
+            if(id) {
+                const r = cachedRecords.find(item => item.id === id);
+                document.getElementById('entry-id').value = r.id;
+                document.getElementById('form-date').value = r.date;
+                document.getElementById('form-quality').value = r.quality;
+                document.getElementById('form-bedtime').value = r.bedtime;
+                document.getElementById('form-wakeup').value = r.wakeup;
+                document.getElementById('form-mood').value = r.mood;
+                document.getElementById('form-notes').value = r.notes;
+            } else {
+                document.getElementById('sleep-form').reset();
+                document.getElementById('entry-id').value = '';
+                document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+
+        function closeModal() { document.getElementById('entry-modal').classList.add('hidden'); }
+
+
+        function saveEntry(e) {
+            e.preventDefault();
+            const id = document.getElementById('entry-id').value;
+            const record = {
+                date: document.getElementById('form-date').value,
+                quality: document.getElementById('form-quality').value,
+                bedtime: document.getElementById('form-bedtime').value,
+                wakeup: document.getElementById('form-wakeup').value,
+                mood: document.getElementById('form-mood').value,
+                notes: document.getElementById('form-notes').value
+            };
+            if(id) record.id = Number(id);
+
+
+            const transaction = db.transaction(["sleep_records"], "readwrite");
+            const store = transaction.objectStore("sleep_records");
+            const request = id ? store.put(record) : store.add(record);
+
+
+            request.onsuccess = () => {
+                closeModal();
+                hydrateApplication();
+            };
+        }
+
+
+        function deleteEntry(id) {
+            if(!confirm("Are you sure you want to delete this specific sleep record?")) return;
+            const transaction = db.transaction(["sleep_records"], "readwrite");
+            const store = transaction.objectStore("sleep_records");
+            store.delete(id).onsuccess = () => hydrateApplication();
+        }
+
+
+        function renderHistory() {
+            const grid = document.getElementById('history-grid');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            grid.innerHTML = '';
+
+
+            let processed = [...cachedRecords].filter(r => r.notes.toLowerCase().includes(search) || r.date.includes(search));
+            
+            processed.forEach(r => {
+                const dur = calculateDuration(r.bedtime, r.wakeup);
+                const card = document.createElement('div');
+                card.className = 'glass-card p-5 rounded-2xl flex flex-col justify-between space-y-4';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-base text-slate-200">${new Date(r.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})}</h4>
+                            <p class="text-xs text-indigo-400 font-mono mt-0.5">${r.bedtime} - ${r.wakeup}</p>
+                        </div>
+                        <span class="bg-indigo-950/80 text-indigo-300 font-bold px-2.5 py-1 rounded-lg text-xs border border-indigo-800/40">${dur.toFixed(1)} hrs</span>
+                    </div>
+                    ${r.notes ? `<p class="text-xs text-slate-400 bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/60 line-clamp-2">${r.notes}</p>` : ''}
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
+                        <div class="flex items-center space-x-2 text-xs">
+                            <span class="px-2 py-0.5 bg-slate-800 rounded text-slate-300">${r.mood}</span>
+                            <span class="text-amber-400 flex items-center font-bold"><span class="material-icons-round text-xs mr-0.5">star</span>${r.quality}</span>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button onclick="openModal(${r.id})" class="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"><span class="material-icons-round text-sm">edit</span></button>
+                            <button onclick="deleteEntry(${r.id})" class="p-1.5 hover:bg-rose-950 text-slate-400 hover:text-rose-400 rounded-lg transition"><span class="material-icons-round text-sm">delete</span></button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+
+        // CONFIGURE SETTINGS ACTIONS
+        function saveTargets() {
+            targets.duration = parseFloat(document.getElementById('cfg-target-duration').value);
+            targets.bedtime = document.getElementById('cfg-target-bedtime').value;
+            targets.wake = document.getElementById('cfg-target-wake').value;
+            localStorage.setItem('somnus_targets', JSON.stringify(targets));
+            hydrateApplication();
+            alert("Local performance configuration objectives updated successfully.");
+        }
+
+
+        function toggleAmoled() {
+            document.body.classList.toggle('amoled', document.getElementById('cfg-amoled').checked);
+        }
+
+
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify(cachedRecords, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `somnus_sleep_manifest_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+
+        function importJSON(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = JSON.parse(event.target.result);
+                const tx = db.transaction(["sleep_records"], "readwrite");
+                const store = tx.objectStore("sleep_records");
+                data.forEach(item => { delete item.id; store.add(item); });
+                tx.oncomplete = () => { hydrateApplication(); alert("Import matrix integrated successfully!"); };
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+
+        function purgeEngine() {
+            if(confirm("Confirming absolute loss of data. Wipe local storage?")) {
+                indexedDB.deleteDatabase("SomnusDatabase");
+                localStorage.clear();
+                window.location.reload();
+            }
+        }
+
+
+        // SERVICE WORKER REGISTRATION
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log("SW registration bypassed/failed:", err));
+        }
+    </script>
+</body>
+</html>
+
